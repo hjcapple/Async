@@ -26,10 +26,10 @@ import Foundation
 
 public final class AsyncHolder<U>
 {
-    private var _leftBlock: (U->Void) -> Void
+    private var _leftBlock: (@escaping ((U)->Void)) -> Void
     private var _isFinish = true
     
-    private init(_ block: (U->Void) -> Void)
+    fileprivate init(_ block: @escaping (@escaping ((U)->Void)) -> Void)
     {
         _leftBlock = block
     }
@@ -43,42 +43,48 @@ public final class AsyncHolder<U>
         }
     }
     
-    public func main<R>(rightBlock: U->R) -> AsyncHolder<R>
+    @discardableResult
+    public func main<R>(_ rightBlock: @escaping (U)->R) -> AsyncHolder<R>
     {
-        return async(dispatch_get_main_queue(), rightBlock)
+        return async(DispatchQueue.main, rightBlock)
     }
     
-    public func background<R>(rightBlock: U->R) -> AsyncHolder<R>
+    @discardableResult
+    public func background<R>(_ rightBlock: @escaping (U)->R) -> AsyncHolder<R>
     {
-        return async(dispatch_get_global_queue(0, 0), rightBlock)
+        return async(DispatchQueue.global(), rightBlock)
     }
     
-    public func async<R>(queue : dispatch_queue_t, _ rightBlock: U->R) -> AsyncHolder<R>
+    @discardableResult
+    public func async<R>(_ queue : DispatchQueue, _ rightBlock: @escaping (U)-> R) -> AsyncHolder<R>
     {
         _isFinish = false
         let leftBlock = _leftBlock
         return AsyncHolder<R> { complete in
             leftBlock { u in
-                dispatch_async(queue) {
-                    complete(rightBlock(u))
+                queue.async {
+                    let r = rightBlock(u)
+                    complete(r)
                 }
             }
         }
     }
     
-    public func main_delay<R>(time: Double, _ rightBlock: U->R) -> AsyncHolder<R>
+    @discardableResult
+    public func main_delay<R>(_ time: Double, _ rightBlock: @escaping (U)->R) -> AsyncHolder<R>
     {
-        return delay(time, dispatch_get_main_queue(), rightBlock)
+        return delay(time, DispatchQueue.main, rightBlock)
     }
     
-    public func delay<R>(time: Double, _ queue: dispatch_queue_t, _ rightBlock: U->R) -> AsyncHolder<R>
+    @discardableResult
+    public func delay<R>(_ time: Double, _ queue: DispatchQueue, _ rightBlock: @escaping (U)->R) -> AsyncHolder<R>
     {
         _isFinish = false
         let leftBlock = _leftBlock
         return AsyncHolder<R> { complete in
             leftBlock { u in
-                let t = dispatch_time(DISPATCH_TIME_NOW, Int64(time * Double(NSEC_PER_SEC)))
-                dispatch_after(t, queue) {
+                let t = DispatchTime.now() + Double(Int64(time * Double(NSEC_PER_SEC))) / Double(NSEC_PER_SEC)
+                queue.asyncAfter(deadline: t) {
                     complete(rightBlock(u))
                 }
             }
@@ -95,27 +101,32 @@ public struct Async
         }
     }
     
-    public static func main<R>(rightBlock: Void->R) -> AsyncHolder<R>
+    @discardableResult
+    public static func main<R>(_ rightBlock: @escaping (Void)->R) -> AsyncHolder<R>
     {
         return empty().main(rightBlock)
     }
     
-    public static func background<R>(rightBlock: Void->R) -> AsyncHolder<R>
+    @discardableResult
+    public static func background<R>(_ rightBlock: @escaping (Void)->R) -> AsyncHolder<R>
     {
         return empty().background(rightBlock)
     }
     
-    public static func async<R>(queue : dispatch_queue_t, _ rightBlock: Void->R) -> AsyncHolder<R>
+    @discardableResult
+    public static func async<R>(_ queue : DispatchQueue, _ rightBlock: @escaping (Void)->R) -> AsyncHolder<R>
     {
         return empty().async(queue, rightBlock)
     }
     
-    public static func main_delay<R>(time: Double, _ rightBlock: Void->R) -> AsyncHolder<R>
+    @discardableResult
+    public static func main_delay<R>(_ time: Double, _ rightBlock: @escaping (Void)->R) -> AsyncHolder<R>
     {
         return empty().main_delay(time, rightBlock)
     }
     
-    public static func delay<R>(time: Double, _ queue: dispatch_queue_t, _ rightBlock: Void->R) -> AsyncHolder<R>
+    @discardableResult
+    public static func delay<R>(_ time: Double, _ queue: DispatchQueue, _ rightBlock: @escaping (Void)->R) -> AsyncHolder<R>
     {
         return empty().delay(time, queue, rightBlock)
     }
