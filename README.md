@@ -1,18 +1,16 @@
-# Async
-将 dispatch_async 的回调转成串行。
+## Async
 
 在 iOS/Mac 编程中，经常使用 Grand Central Dispatch，它的语法使用回调。如：
 
 ```Swift
-dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), {
+DispatchQueue.global().async {
     print("This is run on the background queue")
-  
-  let result = "hello, World"
-    dispatch_async(dispatch_get_main_queue(), {
+    let result = "hello, World"
+    DispatchQueue.main.async {
         print("This is run on the main queue, after the previous block")
-    print(result)
-    })
-})
+        print(result)
+    }
+}
 ```
 这样就会产生一系列嵌套，当嵌套太多的时候代码就会混乱。Async 将这些回调嵌套，转换成串行。上面代码使用 Async 可以改写成：
 
@@ -37,7 +35,7 @@ Async.background {
     let result = a + b
     return result
     
-}.delay(1.0, dispatch_get_global_queue(0, 0)) { (result: Int) in
+}.delay(1.0, DispatchQueue.global()) { (result: Int) in
     print("background 2")
     return "finish: \(result)"
     
@@ -49,15 +47,24 @@ Async.background {
 
 上述代码，表示现在后台执行，返回（10， 10), 之后回到主线程，在延迟 1 秒在后台执行，再回到主线程。上面例子可以看到，前一个 block 的返回值就是后面的 block 的参数。
 
-### 安装
-只有一个小文件，Async.swift，直接将其包含到工程中。
+## 环境要求
+* Swift 3.0+
+* Xcode 8.0+
+* iOS 8.0+ / macOS 10.10
 
+## 安装
 
+### Carthage
 
+在您的 `Cartfile` 添加上这一行
 
+```ogdl
+github "hjcapple/Async"
+```
 
+运行命令 `carthage update` 生成 `Async.framework`，将其添加到工程中。
 
+### 手动安装
 
-
-
+下载代码，将 `Async.xcodeproj` 添加到工程当中。或者直接将 `Async/Async.swift` 这个文件添加到工程当中。
 
