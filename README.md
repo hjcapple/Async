@@ -59,7 +59,7 @@ Async.background {
 在您的 `Cartfile` 添加上这一行
 
 ```ogdl
-github "hjcapple/Async"
+github "hjcapple/Async" "HEAD"
 ```
 
 运行命令 `carthage update` 生成 `Async.framework`，将其添加到工程中。
