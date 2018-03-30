@@ -1,7 +1,7 @@
 /*
  The MIT License (MIT)
 
- Copyright (c) 2017 HJC hjcapple@gmail.com
+ Copyright (c) 2018 HJC hjcapple@gmail.com
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,7 @@ public final class AsyncHolder<U> {
 
     deinit {
         if _isFinish {
-            _leftBlock() { _ in
+            _leftBlock { _ in
             }
         }
     }
@@ -75,7 +75,8 @@ public final class AsyncHolder<U> {
         return AsyncHolder<R> { complete in
             leftBlock { u in
                 queue.asyncAfter(deadline: .now() + time) {
-                    complete(rightBlock(u))
+                    let r = rightBlock(u)
+                    complete(r)
                 }
             }
         }
@@ -83,37 +84,42 @@ public final class AsyncHolder<U> {
 }
 
 public struct Async {
-
-    private static func empty() -> AsyncHolder<Void> {
-        return AsyncHolder<Void> { (complete: @escaping (() -> Void)) in
-            complete()
-        }
-    }
-
+    
     @discardableResult
     public static func main<R>(_ rightBlock: @escaping () -> R) -> AsyncHolder<R> {
-        return empty().main(rightBlock)
+        return async(DispatchQueue.main, rightBlock)
     }
 
     @discardableResult
     public static func background<R>(_ rightBlock: @escaping () -> R) -> AsyncHolder<R> {
-        return empty().background(rightBlock)
+        return async(DispatchQueue.global(), rightBlock)
     }
 
     @discardableResult
     public static func async<R>(_ queue: DispatchQueue, _ rightBlock: @escaping () -> R) -> AsyncHolder<R> {
-        return empty().async(queue, rightBlock)
+        let block: (@escaping ((R) -> Void)) -> Void = { complete in
+            queue.async {
+                let r = rightBlock()
+                complete(r)
+            }
+        }
+        return AsyncHolder<R>(block)
     }
 
     @discardableResult
     public static func main_delay<R>(_ time: Double, _ rightBlock: @escaping () -> R) -> AsyncHolder<R> {
-        return empty().main_delay(time, rightBlock)
+        return delay(time, DispatchQueue.main, rightBlock)
     }
 
     @discardableResult
     public static func delay<R>(_ time: Double, _ queue: DispatchQueue, _ rightBlock: @escaping () -> R) -> AsyncHolder<R> {
-        return empty().delay(time, queue, rightBlock)
+        let block: (@escaping ((R) -> Void)) -> Void = { complete in
+            queue.asyncAfter(deadline: .now() + time) {
+                let r = rightBlock()
+                complete(r)
+            }
+        }
+        return AsyncHolder<R>(block)
     }
 }
-
 
